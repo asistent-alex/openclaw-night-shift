@@ -100,6 +100,10 @@ $(date -Iseconds)
 EOF
 
 echo "   ✅ Task file created: ${TASK_FILE}" >&2
+
+# ── Update TASKS.md — add entry ──
+"${SCRIPT_DIR}/lib/tasks.sh" add "${TODAY}" "${TOPIC}" "${BRANCH}" "${AGENT}" "${TYPE}" >/dev/null 2>&2 || true
+
 echo "" >&2
 echo "   (Production call would be:)" >&2
 echo "   sessions_spawn --runtime subagent --mode run --agent ${AGENT} --task '${TASK_FILE}'" >&2

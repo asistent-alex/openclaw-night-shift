@@ -1,0 +1,8 @@
+# Night Shift — Local state (not tracked in git)
+logs/
+missions/*.processed
+TASKS.md
+
+# Keep directory structure with .gitkeep
+!logs/.gitkeep
+!missions/.gitkeep

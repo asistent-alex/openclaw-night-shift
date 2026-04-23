@@ -57,6 +57,12 @@ echo "" >&2
 echo "   (In the full implementation, this would send via nexlink skill)" >&2
 echo "   Example: openclaw nexlink send --to ${EMAIL_TO} --subject '${EMAIL_SUBJECT}'" >&2
 
+# ── Update TASKS.md — archive completed tasks ──
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd .. && pwd)"
+echo "   🗄️ Archiving completed tasks..." >&2
+"${SCRIPT_DIR}/lib/tasks.sh" archive >/dev/null 2>&2 || true
+echo "   ✅ Archive complete" >&2
+
 # ── Output JSON safely using jq ──
 jq -n \
   --arg date "$TODAY" \
