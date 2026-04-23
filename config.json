@@ -1,5 +1,10 @@
 {
-  "agent": "dev-nexlink",
+  "agents": {
+    "nexlink": "dev-nexlink",
+    "grw": "dev-grw",
+    "ptopr": "main",
+    "default": "dev-nexlink"
+  },
   "schedule": "0 22 * * *",
   "email": {
     "to": "alex.bogdan@firmade.it",

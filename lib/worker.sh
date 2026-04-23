@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ── worker.sh — Spawn OpenClaw subagent to execute a mission ──
+# ── worker.sh — Dispatch mission to dedicated OpenClaw agent ──
 # Usage: worker.sh <mission_file> <config_file>
 # All informational output goes to stderr; JSON result goes to stdout
 
@@ -19,11 +19,11 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   exit 1
 fi
 
-AGENT=$(jq -r '.agent' "$CONFIG_FILE")
-BRANCH_PREFIX=$(jq -r '.branch_prefix // "night-shift"' "$CONFIG_FILE")
 TODAY=$(date +%Y-%m-%d)
 LOGS_DIR="${SCRIPT_DIR}/logs"
 mkdir -p "$LOGS_DIR"
+
+BRANCH_PREFIX=$(jq -r '.branch_prefix // "night-shift"' "$CONFIG_FILE")
 
 # Extract mission fields
 TOPIC=$(grep '^topic:' "$MISSION_FILE" 2>/dev/null | cut -d: -f2- | sed 's/^ *//; s/^"//; s/"$//' | head -1)
@@ -35,94 +35,134 @@ if [[ -z "$TOPIC" ]]; then
   TOPIC=$(basename "$MISSION_FILE" .md)
 fi
 
+# Fallback repo
+if [[ -z "$REPO_ALIAS" ]]; then
+  REPO_ALIAS=$(jq -r '.repos[] | select(.default == true) | .alias' "$CONFIG_FILE" | head -1 || echo "nexlink")
+fi
+
 BRANCH="${BRANCH_PREFIX}/${TODAY}-${TOPIC// /-}"
-BRANCH="${BRANCH:0:50}"  # keep branch name reasonable
+BRANCH="${BRANCH:0:50}"
 
-echo "" >&2
-echo "🚀 Night Shift Worker" >&2
-echo "   Agent: ${AGENT}" >&2
-echo "   Topic: ${TOPIC}" >&2
-echo "   Type: ${TYPE}" >&2
-echo "   Branch: ${BRANCH}" >&2
-echo "" >&2
+# Resolve agent from config mapping
+AGENT_NAME=$(jq -r --arg repo "$REPO_ALIAS" '.agents[$repo] // .agents.default // "main"' "$CONFIG_FILE")
 
-# Build the prompt for the subagent
-# This integrates with prompt-to-pr skill workflow
-PROMPT=$(cat <<EOF
-You are the Night Shift worker. Execute the following mission using prompt-to-pr workflow.
+# Resolve repo path
+REPO_PATH=$(jq -r --arg alias "$REPO_ALIAS" '.repos[] | select(.alias == $alias) | .path' "$CONFIG_FILE" | head -1 || echo "")
+if [[ -z "$REPO_PATH" || "$REPO_PATH" == "null" ]]; then
+  # Try expanding ~ manually
+  REPO_PATH="${HOME}/.openclaw/skills/${REPO_ALIAS}"
+fi
 
-MISSION:
-$(cat "$MISSION_FILE")
+# Resolve absolute path for task file
+MISSION_ABS="$(cd "$(dirname "$MISSION_FILE")" && pwd)/$(basename "$MISSION_FILE")"
 
-YOUR TASK:
-1. Research the topic via web search (2-3 searches max).
-2. Summarize findings in 3-5 bullets.
-3. Activate prompt-to-pr skill and implement:
-   - Repo: ${REPO_ALIAS:-default}
-   - Branch: ${BRANCH}
-   - Mode: ${TYPE}
-4. Open a PR with clear description referencing this night-shift mission.
-5. Report back: PR URL, summary of changes, any blockers.
-
-RULES:
-- Follow prompt-to-pr phases: Clarify → Plan → APPROVE → Implement → Test → Verify → APPROVE → PR
-- Keep changes focused and minimal.
-- Add tests if applicable.
-- Do NOT push to main directly.
-- If stuck after 3 attempts, abort and report failure with reason.
-- Update TASKS.md with progress before finishing.
-EOF
-)
-
-echo "📝 Subagent prompt prepared (${#PROMPT} chars)" >&2
-echo "   Spawning via sessions_spawn..." >&2
-echo "" >&2
-
-# Create a task file for tracking
+# Create concise task file for agent
 TASK_FILE="${LOGS_DIR}/task-${TODAY}-${TOPIC// /-}.md"
 cat > "$TASK_FILE" <<EOF
-# Night Shift Task — ${TODAY}
+# Night Shift Mission — ${TODAY}
 
-## Mission
+## Topic
 ${TOPIC}
 
-## Prompt
-${PROMPT}
+## Repo
+${REPO_ALIAS} → ${REPO_PATH}
 
 ## Branch
 ${BRANCH}
 
-## Status
-queued
+## Type
+${TYPE}
 
-## Started
-$(date -Iseconds)
+## Priority
+${PRIORITY}
+
+## Full Mission File
+${MISSION_ABS}
+
+## Instructions
+1. Read the full mission file above
+2. Use prompt-to-pr skill to implement
+3. Branch from main: ${BRANCH}
+4. Open PR when done
+5. Report: PR URL, summary, any blockers
+
+## Context
+- You are dev agent ${AGENT_NAME}
+- This task was dispatched by Night Shift orchestrator
+- Execute autonomously, ask user only if truly blocked
 EOF
 
-echo "   ✅ Task file created: ${TASK_FILE}" >&2
+echo "" >&2
+echo "🚀 Night Shift Worker" >&2
+echo "   Agent: ${AGENT_NAME}" >&2
+echo "   Topic: ${TOPIC}" >&2
+echo "   Repo: ${REPO_ALIAS} (${REPO_PATH})" >&2
+echo "   Branch: ${BRANCH}" >&2
+echo "   Type: ${TYPE}" >&2
+echo "" >&2
 
-# ── Update TASKS.md — add entry and mark ready ──
-"${SCRIPT_DIR}/lib/tasks.sh" add "${TODAY}" "${TOPIC}" "${BRANCH}" "${AGENT}" "${TYPE}" >/dev/null 2>&2 || true
-"${SCRIPT_DIR}/lib/tasks.sh" update "${BRANCH}" status "ready_to_spawn" >/dev/null 2>&2 || true
+# Build concise message for agent
+MESSAGE=$(cat <<EOF
+Night Shift mission: ${TOPIC}
+Repo: ${REPO_ALIAS} at ${REPO_PATH}
+Branch: ${BRANCH}
+Type: ${TYPE}
+
+Read task file: ${TASK_FILE}
+Then execute using prompt-to-pr skill.
+EOF
+)
+
+echo "📤 Dispatching to agent ${AGENT_NAME}..." >&2
+
+# Dispatch to agent in background — non-blocking
+AGENT_LOG="${LOGS_DIR}/agent-${TODAY}-${TOPIC// /-}.log"
+AGENT_PID_FILE="${LOGS_DIR}/agent-${TODAY}-${TOPIC// /-}.pid"
+
+# Use nohup to survive session termination
+nohup bash -c "
+  openclaw agent \
+    --agent ${AGENT_NAME} \
+    --message \"$(echo "$MESSAGE" | sed 's/"/\\"/g')\" \
+    --timeout 3600 \
+    > \"${AGENT_LOG}\" 2>&1 \
+    || echo 'AGENT_EXITED_WITH_ERROR' >> \"${AGENT_LOG}\"
+  echo \"AGENT_FINISHED at \$(date -Iseconds)\" >> \"${AGENT_LOG}\"
+" >/dev/null 2>&1 &
+
+AGENT_PID=$!
+echo "$AGENT_PID" > "$AGENT_PID_FILE"
+
+echo "   ✅ Agent PID: ${AGENT_PID}" >&2
+echo "   📝 Log: ${AGENT_LOG}" >&2
+
+# Update TASKS.md
+"${SCRIPT_DIR}/lib/tasks.sh" add "${TODAY}" "${TOPIC}" "${BRANCH}" "${AGENT_NAME}" "${TYPE}" >/dev/null 2>&1 || true
+"${SCRIPT_DIR}/lib/tasks.sh" update "${BRANCH}" status "dispatched_to_agent" >/dev/null 2>&1 || true
+"${SCRIPT_DIR}/lib/tasks.sh" update "${BRANCH}" result "PID:${AGENT_PID}" >/dev/null 2>&1 || true
 
 echo "" >&2
-echo "   ✅ Task ready. An OpenClaw assistant should now run:" >&2
-echo "      sessions_spawn --runtime subagent --mode run --agent ${AGENT} --task '${TASK_FILE}'" >&2
+echo "   ✅ Mission dispatched. Agent working in background." >&2
+echo "   ⏱️  Max runtime: 1 hour" >&2
 
-# ── Output JSON safely using jq ──
+# ── Output JSON ──
 jq -n \
-  --arg agent "$AGENT" \
+  --arg agent "$AGENT_NAME" \
   --arg topic "$TOPIC" \
+  --arg repo "$REPO_ALIAS" \
   --arg branch "$BRANCH" \
   --arg type "$TYPE" \
   --arg task_file "$TASK_FILE" \
-  --argjson prompt_length "${#PROMPT}" \
+  --arg pid "$AGENT_PID" \
+  --arg log "$AGENT_LOG" \
   '{
-    status: "queued",
+    status: "dispatched_to_agent",
     agent: $agent,
     topic: $topic,
+    repo: $repo,
     branch: $branch,
     type: $type,
     task_file: $task_file,
-    prompt_length: $prompt_length
+    pid: $pid,
+    log: $log
   }'
