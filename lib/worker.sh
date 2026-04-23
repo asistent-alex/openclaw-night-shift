@@ -101,12 +101,13 @@ EOF
 
 echo "   ✅ Task file created: ${TASK_FILE}" >&2
 
-# ── Update TASKS.md — add entry ──
+# ── Update TASKS.md — add entry and mark ready ──
 "${SCRIPT_DIR}/lib/tasks.sh" add "${TODAY}" "${TOPIC}" "${BRANCH}" "${AGENT}" "${TYPE}" >/dev/null 2>&2 || true
+"${SCRIPT_DIR}/lib/tasks.sh" update "${BRANCH}" status "ready_to_spawn" >/dev/null 2>&2 || true
 
 echo "" >&2
-echo "   (Production call would be:)" >&2
-echo "   sessions_spawn --runtime subagent --mode run --agent ${AGENT} --task '${TASK_FILE}'" >&2
+echo "   ✅ Task ready. An OpenClaw assistant should now run:" >&2
+echo "      sessions_spawn --runtime subagent --mode run --agent ${AGENT} --task '${TASK_FILE}'" >&2
 
 # ── Output JSON safely using jq ──
 jq -n \
