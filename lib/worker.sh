@@ -3,6 +3,7 @@ set -euo pipefail
 
 # ── worker.sh — Spawn OpenClaw subagent to execute a mission ──
 # Usage: worker.sh <mission_file> <config_file>
+# All informational output goes to stderr; JSON result goes to stdout
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd .. && pwd)"
 MISSION_FILE="${1:-}"
@@ -25,10 +26,10 @@ LOGS_DIR="${SCRIPT_DIR}/logs"
 mkdir -p "$LOGS_DIR"
 
 # Extract mission fields
-TOPIC=$(grep '^topic:' "$MISSION_FILE" 2>/dev/null | cut -d: -f2- | sed 's/^ *//' | head -1)
-REPO_ALIAS=$(grep '^repo:' "$MISSION_FILE" 2>/dev/null | cut -d: -f2- | sed 's/^ *//' | head -1 || echo "")
-TYPE=$(grep '^type:' "$MISSION_FILE" 2>/dev/null | cut -d: -f2- | sed 's/^ *//' | head -1 || echo "feature")
-PRIORITY=$(grep '^priority:' "$MISSION_FILE" 2>/dev/null | cut -d: -f2- | sed 's/^ *//' | head -1 || echo "medium")
+TOPIC=$(grep '^topic:' "$MISSION_FILE" 2>/dev/null | cut -d: -f2- | sed 's/^ *//; s/^"//; s/"$//' | head -1)
+REPO_ALIAS=$(grep '^repo:' "$MISSION_FILE" 2>/dev/null | cut -d: -f2- | sed 's/^ *//; s/^"//; s/"$//' | head -1 || echo "")
+TYPE=$(grep '^type:' "$MISSION_FILE" 2>/dev/null | cut -d: -f2- | sed 's/^ *//; s/^"//; s/"$//' | head -1 || echo "feature")
+PRIORITY=$(grep '^priority:' "$MISSION_FILE" 2>/dev/null | cut -d: -f2- | sed 's/^ *//; s/^"//; s/"$//' | head -1 || echo "medium")
 
 if [[ -z "$TOPIC" ]]; then
   TOPIC=$(basename "$MISSION_FILE" .md)
@@ -37,13 +38,13 @@ fi
 BRANCH="${BRANCH_PREFIX}/${TODAY}-${TOPIC// /-}"
 BRANCH="${BRANCH:0:50}"  # keep branch name reasonable
 
-echo ""
-echo "🚀 Night Shift Worker"
-echo "   Agent: ${AGENT}"
-echo "   Topic: ${TOPIC}"
-echo "   Type: ${TYPE}"
-echo "   Branch: ${BRANCH}"
-echo ""
+echo "" >&2
+echo "🚀 Night Shift Worker" >&2
+echo "   Agent: ${AGENT}" >&2
+echo "   Topic: ${TOPIC}" >&2
+echo "   Type: ${TYPE}" >&2
+echo "   Branch: ${BRANCH}" >&2
+echo "" >&2
 
 # Build the prompt for the subagent
 # This integrates with prompt-to-pr skill workflow
@@ -73,9 +74,9 @@ RULES:
 EOF
 )
 
-echo "📝 Subagent prompt prepared (${#PROMPT} chars)"
-echo "   Spawning via sessions_spawn..."
-echo ""
+echo "📝 Subagent prompt prepared (${#PROMPT} chars)" >&2
+echo "   Spawning via sessions_spawn..." >&2
+echo "" >&2
 
 # Create a task file for tracking
 TASK_FILE="${LOGS_DIR}/task-${TODAY}-${TOPIC// /-}.md"
@@ -98,20 +99,25 @@ queued
 $(date -Iseconds)
 EOF
 
-echo "   ✅ Task file created: ${TASK_FILE}"
-echo ""
-echo "   (Production call would be:)"
-echo "   sessions_spawn --runtime subagent --mode run --agent ${AGENT} --task '${TASK_FILE}'"
+echo "   ✅ Task file created: ${TASK_FILE}" >&2
+echo "" >&2
+echo "   (Production call would be:)" >&2
+echo "   sessions_spawn --runtime subagent --mode run --agent ${AGENT} --task '${TASK_FILE}'" >&2
 
-# ── Output ──
-cat <<EOF
-{
-  "status": "queued",
-  "agent": "${AGENT}",
-  "topic": "${TOPIC}",
-  "branch": "${BRANCH}",
-  "type": "${TYPE}",
-  "task_file": "${TASK_FILE}",
-  "prompt_length": ${#PROMPT}
-}
-EOF
+# ── Output JSON safely using jq ──
+jq -n \
+  --arg agent "$AGENT" \
+  --arg topic "$TOPIC" \
+  --arg branch "$BRANCH" \
+  --arg type "$TYPE" \
+  --arg task_file "$TASK_FILE" \
+  --argjson prompt_length "${#PROMPT}" \
+  '{
+    status: "queued",
+    agent: $agent,
+    topic: $topic,
+    branch: $branch,
+    type: $type,
+    task_file: $task_file,
+    prompt_length: $prompt_length
+  }'

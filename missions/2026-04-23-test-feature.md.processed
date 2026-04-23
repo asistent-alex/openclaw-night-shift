@@ -1,0 +1,22 @@
+---
+date: 2026-04-23
+repo: nexlink
+topic: "Add dry-run flag to night-shift CLI"
+type: feature
+priority: low
+---
+
+## Context
+The night-shift.sh script needs a --dry-run flag so users can preview what would happen without executing anything.
+
+## Research Questions
+1. How do other CLI tools implement dry-run flags?
+2. What are best practices for dry-run output formatting?
+
+## Implementation Notes
+Add `--dry-run` flag parsing in night-shift.sh. When enabled, show what would be done but skip actual execution.
+
+## Constraints
+- Keep changes minimal (under 50 lines)
+- Maintain backward compatibility
+- No new dependencies needed

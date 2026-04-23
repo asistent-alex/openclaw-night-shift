@@ -39,7 +39,11 @@ echo ""
 # ── Find missions ──
 MISSIONS=()
 for f in "${MISSIONS_DIR}"/*.md; do
-  [[ -f "$f" ]] && MISSIONS+=("$f")
+  [[ -f "$f" ]] || continue
+  BASENAME=$(basename "$f" .md)
+  [[ "$BASENAME" == "TEMPLATE" ]] && continue
+  [[ "$BASENAME" == _* ]] && continue
+  MISSIONS+=("$f")
 done
 
 if [[ ${#MISSIONS[@]} -eq 0 ]]; then
@@ -58,7 +62,7 @@ for MISSION in "${MISSIONS[@]}"; do
   fi
 
   BASENAME=$(basename "$MISSION" .md)
-  TOPIC=$(grep '^topic:' "$MISSION" | cut -d: -f2- | xargs 2>/dev/null || echo "$BASENAME")
+  TOPIC=$(grep '^topic:' "$MISSION" | cut -d: -f2- | sed 's/^ *//; s/^"//; s/"$//' | xargs 2>/dev/null || echo "$BASENAME")
   
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

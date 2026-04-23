@@ -3,6 +3,7 @@ set -euo pipefail
 
 # ── reporter.sh — Generate and send morning digest email ──
 # Usage: reporter.sh <log_file> <config_file>
+# All informational output goes to stderr; JSON result goes to stdout
 
 LOG_FILE="${1:-}"
 CONFIG_FILE="${2:-./config.json}"
@@ -20,11 +21,11 @@ fi
 EMAIL_TO=$(jq -r '.email.to' "$CONFIG_FILE")
 TODAY=$(date +%Y-%m-%d)
 
-echo ""
-echo "📧 Night Shift Reporter"
-echo "   Log: ${LOG_FILE}"
-echo "   Email: ${EMAIL_TO}"
-echo ""
+echo "" >&2
+echo "📧 Night Shift Reporter" >&2
+echo "   Log: ${LOG_FILE}" >&2
+echo "   Email: ${EMAIL_TO}" >&2
+echo "" >&2
 
 # Count processed missions
 MISSION_COUNT=$(grep -c '→' "$LOG_FILE" 2>/dev/null || echo "0")
@@ -49,21 +50,25 @@ https://firmade.ai | https://firmade.it
 EOF
 )
 
-echo "📬 Email prepared:"
-echo "   To: ${EMAIL_TO}"
-echo "   Subject: ${EMAIL_SUBJECT}"
-echo ""
-echo "   (In the full implementation, this would send via nexlink skill)"
-echo "   Example: openclaw nexlink send --to ${EMAIL_TO} --subject '${EMAIL_SUBJECT}'"
+echo "📬 Email prepared:" >&2
+echo "   To: ${EMAIL_TO}" >&2
+echo "   Subject: ${EMAIL_SUBJECT}" >&2
+echo "" >&2
+echo "   (In the full implementation, this would send via nexlink skill)" >&2
+echo "   Example: openclaw nexlink send --to ${EMAIL_TO} --subject '${EMAIL_SUBJECT}'" >&2
 
-# ── Placeholder output ──
-cat <<EOF
-{
-  "status": "ready",
-  "date": "${TODAY}",
-  "missions": ${MISSION_COUNT},
-  "recipient": "${EMAIL_TO}",
-  "subject": "${EMAIL_SUBJECT}",
-  "body_length": ${#EMAIL_BODY}
-}
-EOF
+# ── Output JSON safely using jq ──
+jq -n \
+  --arg date "$TODAY" \
+  --argjson missions "${MISSION_COUNT}" \
+  --arg recipient "$EMAIL_TO" \
+  --arg subject "$EMAIL_SUBJECT" \
+  --argjson body_length "${#EMAIL_BODY}" \
+  '{
+    status: "ready",
+    date: $date,
+    missions: $missions,
+    recipient: $recipient,
+    subject: $subject,
+    body_length: $body_length
+  }'
