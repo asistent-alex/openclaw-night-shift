@@ -30,6 +30,12 @@ TODAY=$(date +%Y-%m-%d)
 LOG_FILE="${LOGS_DIR}/${TODAY}.log"
 mkdir -p "$LOGS_DIR"
 
+echo ""
+echo "🌙 Night Shift — ${TODAY}"
+echo "   Agent: ${AGENT}"
+echo "   Dry-run: ${DRY_RUN}"
+echo ""
+
 # ── Find missions ──
 MISSIONS=()
 for f in "${MISSIONS_DIR}"/*.md; do
@@ -41,6 +47,8 @@ if [[ ${#MISSIONS[@]} -eq 0 ]]; then
   exit 0
 fi
 
+echo "📋 Found ${#MISSIONS[@]} mission(s)."
+
 # ── Process missions ──
 PROCESSED=0
 for MISSION in "${MISSIONS[@]}"; do
@@ -50,49 +58,62 @@ for MISSION in "${MISSIONS[@]}"; do
   fi
 
   BASENAME=$(basename "$MISSION" .md)
-  TOPIC=$(grep '^topic:' "$MISSION" | cut -d: -f2- | xargs || echo "$BASENAME")
-  REPO=$(grep '^repo:' "$MISSION" | cut -d: -f2- | xargs || echo "nexlink")
+  TOPIC=$(grep '^topic:' "$MISSION" | cut -d: -f2- | xargs 2>/dev/null || echo "$BASENAME")
   
-  BRANCH="${BRANCH_PREFIX}/${TODAY}-${BASENAME}"
-
   echo ""
-  echo "🌙 Night Shift — Mission: ${TOPIC}"
-  echo "   Branch: ${BRANCH}"
-  echo "   Repo: ${REPO}"
-  echo "   Dry-run: ${DRY_RUN}"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "🌙 Mission: ${TOPIC}"
+  echo "   File: ${BASENAME}"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
   if $DRY_RUN; then
-    echo "   ⏸️ Would spawn subagent '${AGENT}' and run prompt-to-pr feature."
+    echo "   ⏸️ Dry-run: Would process mission."
+    echo "   📁 Research: lib/research.sh ${BASENAME}"
+    echo "   🚀 Worker: lib/worker.sh ${BASENAME}"
     continue
   fi
 
-  # ── Step 1: Spawn subagent for research + implementation ──
-  echo "   🚀 Spawning subagent '${AGENT}'..."
-  
-  # Build prompt from mission file
-  MISSION_CONTENT=$(cat "$MISSION")
-  
-  # The subagent will:
-  # 1. Research the topic via web search
-  # 2. Use prompt-to-pr to implement
-  # 3. Create branch and open PR
-  
-  # For now: log and mark as processed
-  echo "   ✅ Mission queued for subagent."
-  echo "   📝 Results will be in ${BRANCH}"
+  # ── Step 1: Research ──
+  echo ""
+  echo "   🔍 Step 1: Research"
+  RESEARCH_RESULT=$("${SCRIPT_DIR}/lib/research.sh" "$MISSION")
+  RESEARCH_TOPIC=$(echo "$RESEARCH_RESULT" | jq -r '.topic // empty')
+  echo "   ✅ Research ready: ${RESEARCH_TOPIC}"
 
-  # Mark as processed (rename or move)
+  # ── Step 2: Worker (spawn subagent) ──
+  echo ""
+  echo "   🚀 Step 2: Spawn Worker"
+  WORKER_RESULT=$("${SCRIPT_DIR}/lib/worker.sh" "$MISSION" "$CONFIG")
+  WORKER_BRANCH=$(echo "$WORKER_RESULT" | jq -r '.branch // empty')
+  WORKER_STATUS=$(echo "$WORKER_RESULT" | jq -r '.status // empty')
+  echo "   ✅ Worker queued: ${WORKER_STATUS}"
+  echo "   🌿 Branch: ${WORKER_BRANCH}"
+
+  # ── Step 3: Mark as processed ──
   mv "$MISSION" "${MISSION}.processed"
   PROCESSED=$((PROCESSED + 1))
   
   # Log
-  echo "[${TODAY}] ${TOPIC} → ${BRANCH}" >> "$LOG_FILE"
+  echo "[${TODAY}] ${TOPIC} → ${WORKER_BRANCH}" >> "$LOG_FILE"
 done
 
 echo ""
-echo "🌅 Night Shift complete. ${PROCESSED} missions processed."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🌅 Night Shift complete. ${PROCESSED} mission(s) processed."
 echo "   Log: ${LOG_FILE}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# ── Step 4: Reporter (morning digest) ──
 if [[ "$PROCESSED" -gt 0 ]]; then
-  echo "   📧 Morning digest will be sent to ${EMAIL_TO}"
+  echo ""
+  echo "   📧 Step 4: Morning Digest"
+  REPORT_RESULT=$("${SCRIPT_DIR}/lib/reporter.sh" "$LOG_FILE" "$CONFIG")
+  REPORT_MISSIONS=$(echo "$REPORT_RESULT" | jq -r '.missions // 0')
+  REPORT_STATUS=$(echo "$REPORT_RESULT" | jq -r '.status // empty')
+  echo "   ✅ Digest ready: ${REPORT_STATUS} (${REPORT_MISSIONS} missions)"
+  echo "   📬 Email will be sent to: ${EMAIL_TO}"
 fi
+
+echo ""
+echo "☕ Done. See you tomorrow night."
+echo ""
