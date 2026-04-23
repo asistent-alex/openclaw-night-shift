@@ -6,6 +6,14 @@ AI agent that researches and implements features while you sleep. Built for Open
 
 Built by [Firma de AI](https://firmade.ai), supported by [Firma de IT](https://firmade.it).
 
+## Objectives
+
+See [OBJECTIVES.md](OBJECTIVES.md) for:
+- System mission statement
+- Agent scope and constraints
+- Success metrics
+- Escalation rules
+
 ## Quick Start
 
 ```bash
