@@ -49,6 +49,22 @@ class TestErrorHandling:
     def test_nextcloud_timeout(self): ...
 ```
 
+## Constraints
+
+- **DO NOT MERGE PR automatically** — open PR and wait for human review
+- Mock EWS/Nextcloud APIs (don't hit real servers)
+- Keep test data isolated (fixtures)
+- Tests must pass before PR is opened
+
+## Workflow
+
+1. Create branch: `sync-tests`
+2. Write tests incrementally (email → contact → task → error)
+3. Run `pytest` after each test group
+4. Open PR when all tests pass
+5. Report PR URL and STOP — wait for human review
+6. Do NOT merge — human will review and merge
+
 ## Acceptance Criteria
 
 - [ ] >80% code coverage for sync module

@@ -20,3 +20,6 @@ What should the agent implement?
 - Max X lines changed
 - Keep backward compatibility
 - Add tests if possible
+- **DO NOT MERGE PRs AUTOMATICALLY** — open PR and wait for human review
+- Include "WIP" or "Ready for review" in PR title as appropriate
+- After PR is opened, report back with PR URL and STOP

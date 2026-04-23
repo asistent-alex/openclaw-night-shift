@@ -84,7 +84,14 @@ ${MISSION_ABS}
 2. Use prompt-to-pr skill to implement
 3. Branch from main: ${BRANCH}
 4. Open PR when done
-5. Report: PR URL, summary, any blockers
+5. **CRITICAL: DO NOT MERGE THE PR AUTOMATICALLY** — open PR and STOP
+6. Report: PR URL, summary, any blockers
+7. Wait for human review and merge
+
+## Constraints
+- Create PR but do NOT merge it
+- Wait for human review before merge
+- Report PR URL in your response
 
 ## Context
 - You are dev agent ${AGENT_NAME}

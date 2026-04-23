@@ -32,6 +32,22 @@ Add `--json` flag to ALL commands in nexlink:
 - Verify output is valid JSON (can parse with `python -m json.tool`)
 - Ensure non-JSON mode still works (no regression)
 
+## Constraints
+
+- **DO NOT MERGE PR automatically** — open PR and wait for human review
+- Keep backward compatibility (non-JSON mode unchanged)
+- Add tests for JSON output format
+- Max ~200 lines changed per command
+
+## Workflow
+
+1. Create branch: `json-flags`
+2. Implement `--json` for one command at a time
+3. Test each command before moving to next
+4. Open PR when all commands done
+5. Report PR URL and STOP — wait for human review
+6. Do NOT merge — human will review and merge
+
 ## Acceptance Criteria
 
 - [ ] All commands accept `--json`
