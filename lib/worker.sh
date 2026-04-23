@@ -119,12 +119,17 @@ echo "📤 Dispatching to agent ${AGENT_NAME}..." >&2
 AGENT_LOG="${LOGS_DIR}/agent-${TODAY}-${TOPIC// /-}.log"
 AGENT_PID_FILE="${LOGS_DIR}/agent-${TODAY}-${TOPIC// /-}.pid"
 
-# Use nohup to survive session termination
+# Generate unique session ID for this mission
+SESSION_ID="ns-${TODAY}-${TOPIC// /-}-$$"
+
+# Use setsid to fully detach from terminal + unique session ID
 nohup bash -c "
   openclaw agent \
     --agent ${AGENT_NAME} \
+    --session-id '${SESSION_ID}' \
     --message \"$(echo "$MESSAGE" | sed 's/"/\\"/g')\" \
     --timeout 3600 \
+    --json \
     > \"${AGENT_LOG}\" 2>&1 \
     || echo 'AGENT_EXITED_WITH_ERROR' >> \"${AGENT_LOG}\"
   echo \"AGENT_FINISHED at \$(date -Iseconds)\" >> \"${AGENT_LOG}\"
@@ -135,6 +140,7 @@ echo "$AGENT_PID" > "$AGENT_PID_FILE"
 
 echo "   ✅ Agent PID: ${AGENT_PID}" >&2
 echo "   📝 Log: ${AGENT_LOG}" >&2
+echo "   🔑 Session: ${SESSION_ID}" >&2
 
 # Update TASKS.md
 "${SCRIPT_DIR}/lib/tasks.sh" add "${TODAY}" "${TOPIC}" "${BRANCH}" "${AGENT_NAME}" "${TYPE}" >/dev/null 2>&1 || true

@@ -21,7 +21,7 @@ if [[ ! -f "$CONFIG" ]]; then
   exit 1
 fi
 
-AGENT=$(jq -r '.agent' "$CONFIG")
+AGENT=$(jq -r '.agents.default // "main"' "$CONFIG")
 EMAIL_TO=$(jq -r '.email.to' "$CONFIG")
 BRANCH_PREFIX=$(jq -r '.branch_prefix' "$CONFIG")
 MAX_MISSIONS=$(jq -r '.max_missions_per_night' "$CONFIG")
