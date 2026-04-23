@@ -15,6 +15,11 @@
       "path": "~/.openclaw/skills/nexlink",
       "alias": "nexlink",
       "default": true
+    },
+    {
+      "path": "~/.openclaw/skills/github-release-watch",
+      "alias": "grw",
+      "default": false
     }
   ],
   "missions_dir": "missions",
