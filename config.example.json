@@ -1,0 +1,19 @@
+{
+  "agent": "dev-nexlink",
+  "schedule": "0 22 * * *",
+  "email": {
+    "to": "alex.bogdan@firmade.it",
+    "time": "07:00"
+  },
+  "repos": [
+    {
+      "path": "~/.openclaw/skills/nexlink",
+      "alias": "nexlink",
+      "default": true
+    }
+  ],
+  "missions_dir": "missions",
+  "logs_dir": "logs",
+  "max_missions_per_night": 1,
+  "branch_prefix": "night-shift"
+}
