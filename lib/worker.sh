@@ -82,11 +82,12 @@ ${MISSION_ABS}
 ## Instructions
 1. Read the full mission file above
 2. Use prompt-to-pr skill to implement
-3. Branch from main: ${BRANCH}
-4. Open PR when done
-5. **CRITICAL: DO NOT MERGE THE PR AUTOMATICALLY** — open PR and STOP
-6. Report: PR URL, summary, any blockers
-7. Wait for human review and merge
+3. If checkpoints appear, auto-approve (night shift mode)
+4. Branch from main: ${BRANCH}
+5. Open PR when done
+6. **CRITICAL: DO NOT MERGE THE PR AUTOMATICALLY** — open PR and STOP
+7. Report: PR URL, summary, any blockers
+8. Wait for human review and merge
 
 ## Constraints
 - Create PR but do NOT merge it
@@ -110,6 +111,8 @@ echo "" >&2
 
 # Build concise message for agent
 MESSAGE=$(cat <<EOF
+NIGHT_SHIFT_AUTO_APPROVE=1
+
 Night Shift mission: ${TOPIC}
 Repo: ${REPO_ALIAS} at ${REPO_PATH}
 Branch: ${BRANCH}
@@ -117,6 +120,8 @@ Type: ${TYPE}
 
 Read task file: ${TASK_FILE}
 Then execute using prompt-to-pr skill.
+When you encounter approval checkpoints (CHECKPOINT 1 and CHECKPOINT 2), auto-approve them and continue.
+This is autonomous night shift mode — no human is present.
 EOF
 )
 
@@ -131,6 +136,7 @@ SESSION_ID="ns-${TODAY}-${TOPIC// /-}-$$"
 
 # Use setsid to fully detach from terminal + unique session ID
 nohup bash -c "
+  export NIGHT_SHIFT_AUTO_APPROVE=1
   /home/adminul/.npm-global/bin/openclaw agent \
     --agent ${AGENT_NAME} \
     --session-id '${SESSION_ID}' \
