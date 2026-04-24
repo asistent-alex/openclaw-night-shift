@@ -80,24 +80,7 @@ ${PRIORITY}
 ${MISSION_ABS}
 
 ## Instructions
-1. Read the full mission file above
-2. Use prompt-to-pr skill to implement
-3. If checkpoints appear, auto-approve (night shift mode)
-4. Branch from main: ${BRANCH}
-5. Open PR when done
-6. **CRITICAL: DO NOT MERGE THE PR AUTOMATICALLY** — open PR and STOP
-7. Report: PR URL, summary, any blockers
-8. Wait for human review and merge
-
-## Constraints
-- Create PR but do NOT merge it
-- Wait for human review before merge
-- Report PR URL in your response
-
-## Context
-- You are dev agent ${AGENT_NAME}
-- This task was dispatched by Night Shift orchestrator
-- Execute autonomously, ask user only if truly blocked
+Execute using prompt-to-pr. Auto-approve checkpoints. Do NOT merge. Report PR URL.
 EOF
 
 echo "" >&2
@@ -113,15 +96,10 @@ echo "" >&2
 MESSAGE=$(cat <<EOF
 NIGHT_SHIFT_AUTO_APPROVE=1
 
-Night Shift mission: ${TOPIC}
-Repo: ${REPO_ALIAS} at ${REPO_PATH}
-Branch: ${BRANCH}
-Type: ${TYPE}
+/ptopr ${TYPE} --repo ${REPO_PATH} --branch ${BRANCH} --auto-approve
 
-Read task file: ${TASK_FILE}
-Then execute using prompt-to-pr skill.
-When you encounter approval checkpoints (CHECKPOINT 1 and CHECKPOINT 2), auto-approve them and continue.
-This is autonomous night shift mode — no human is present.
+Read: ${TASK_FILE}
+Auto-approve checkpoints. Do NOT merge. Report PR URL.
 EOF
 )
 
@@ -141,7 +119,7 @@ nohup bash -c "
     --agent ${AGENT_NAME} \
     --session-id '${SESSION_ID}' \
     --message \"$(echo "$MESSAGE" | sed 's/"/\\"/g')\" \
-    --timeout 3600 \
+    --timeout 900 \
     --json \
     > \"${AGENT_LOG}\" 2>&1 \
     || echo 'AGENT_EXITED_WITH_ERROR' >> \"${AGENT_LOG}\"
