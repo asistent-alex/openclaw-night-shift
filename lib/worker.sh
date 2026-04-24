@@ -131,7 +131,7 @@ SESSION_ID="ns-${TODAY}-${TOPIC// /-}-$$"
 
 # Use setsid to fully detach from terminal + unique session ID
 nohup bash -c "
-  openclaw agent \
+  /home/adminul/.npm-global/bin/openclaw agent \
     --agent ${AGENT_NAME} \
     --session-id '${SESSION_ID}' \
     --message \"$(echo "$MESSAGE" | sed 's/"/\\"/g')\" \
