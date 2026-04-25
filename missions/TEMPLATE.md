@@ -1,25 +1,19 @@
----
-date: YYYY-MM-DD
-repo: nexlink
-topic: "Short description"
-type: feature
-priority: high
----
+# Night Shift Mission
 
-## Context
-What do you want researched or built?
+## Topic
+[Topic here]
 
-## Research Questions
-1. Question 1?
-2. Question 2?
+## Repo
+[repo alias] → [path]
 
-## Implementation Notes
-What should the agent implement?
+## Branch
+night-shift/2026-04-25-[Topic-slug]
 
-## Constraints
-- Max X lines changed
-- Keep backward compatibility
-- Add tests if possible
-- **DO NOT MERGE PRs AUTOMATICALLY** — open PR and wait for human review
-- Include "WIP" or "Ready for review" in PR title as appropriate
-- After PR is opened, report back with PR URL and STOP
+## Type
+refactor|feature|test|docs
+
+## Priority
+high|medium|low
+
+## Instructions
+Execute using prompt-to-pr. Auto-approve checkpoints. Do NOT merge. Report PR URL.
