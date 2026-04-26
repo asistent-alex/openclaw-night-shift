@@ -15,11 +15,11 @@ TODAY=$(date +%Y-%m-%d)
 YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
 
 # Count completed missions from yesterday
-COMPLETED=$(grep -c "^### \[${YESTERDAY}\]" "$TASKS_MD" 2>/dev/null || echo "0")
-TOTAL=$(grep -c "^### \[" "$TASKS_MD" 2>/dev/null || echo "0")
+COMPLETED=$(grep -c "^- \[${YESTERDAY}\]" "$TASKS_MD" 2>/dev/null || true)
+TOTAL=$(grep -c "^- \[" "$TASKS_MD" 2>/dev/null || true)
 
 # Extract yesterday's missions
-MISSIONS=$(grep -A 20 "^### \[${YESTERDAY}\]" "$TASKS_MD" 2>/dev/null | head -80)
+MISSIONS=$(grep "^- \[${YESTERDAY}\]" "$TASKS_MD" 2>/dev/null)
 
 # Build email subject
 if [[ "$COMPLETED" -gt 0 ]]; then
