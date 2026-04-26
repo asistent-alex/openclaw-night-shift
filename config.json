@@ -24,6 +24,6 @@
   ],
   "missions_dir": "missions",
   "logs_dir": "logs",
-  "max_missions_per_night": 1,
+  "max_missions_per_night": 3,
   "branch_prefix": "night-shift"
 }

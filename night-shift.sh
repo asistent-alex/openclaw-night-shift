@@ -77,23 +77,18 @@ for MISSION in "${MISSIONS[@]}"; do
     continue
   fi
 
-  # ── Step 1: Research ──
+  # ── Step 1: Queue for main session dispatch ──
   echo ""
-  echo "   🔍 Step 1: Research"
-  RESEARCH_RESULT=$("${SCRIPT_DIR}/lib/research.sh" "$MISSION")
-  RESEARCH_TOPIC=$(echo "$RESEARCH_RESULT" | jq -r '.topic // empty')
-  echo "   ✅ Research ready: ${RESEARCH_TOPIC}"
-
-  # ── Step 2: Worker (spawn subagent) ──
-  echo ""
-  echo "   🚀 Step 2: Spawn Worker"
+  echo "   🚀 Step 1: Queue Worker"
   WORKER_RESULT=$("${SCRIPT_DIR}/lib/worker.sh" "$MISSION" "$CONFIG")
   WORKER_BRANCH=$(echo "$WORKER_RESULT" | jq -r '.branch // empty')
   WORKER_STATUS=$(echo "$WORKER_RESULT" | jq -r '.status // empty')
+  WORKER_QUEUE_FILE=$(echo "$WORKER_RESULT" | jq -r '.queue_file // empty')
   echo "   ✅ Worker queued: ${WORKER_STATUS}"
   echo "   🌿 Branch: ${WORKER_BRANCH}"
+  echo "   📄 Queue file: ${WORKER_QUEUE_FILE}"
 
-  # ── Step 3: Mark as processed ──
+  # ── Step 2: Mark as processed ──
   mv "$MISSION" "${MISSION}.processed"
   PROCESSED=$((PROCESSED + 1))
   
